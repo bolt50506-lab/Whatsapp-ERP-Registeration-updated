@@ -1,0 +1,35 @@
+app = "whatsapp-erp-worker"  # change to a globally-unique name, or let `fly launch` pick one
+primary_region = "sin"        # pick the region closest to your ERP/users, e.g. "sin", "fra", "iad"
+
+[build]
+
+[env]
+  PORT = "3001"
+  AUTH_DIR = "/app/data/whatsapp-auth"
+  NODE_ENV = "production"
+
+[[mounts]]
+  source = "whatsapp_auth"
+  destination = "/app/data/whatsapp-auth"
+
+[[services]]
+  internal_port = 3001
+  protocol = "tcp"
+  auto_stop_machines = false   # keep it running — a stopped machine drops the WhatsApp socket
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.http_checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/v1/health"
