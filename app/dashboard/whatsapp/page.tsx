@@ -213,6 +213,13 @@ export default function WhatsAppPage() {
       console.error('WhatsApp worker action failed:', error);
     }
 
+    if (selected.provider === 'wasender') {
+      await loadData();
+      await loadLogs();
+      setActionLoading(false);
+      return;
+    }
+
     if (action === 'start' || action === 'reconnect') {
       await supabase
         .from('whatsapp_connections')
@@ -267,7 +274,7 @@ export default function WhatsAppPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">WhatsApp Connection</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Connect using official WhatsApp Cloud API or run WhatsApp Web/Baileys locally on your PC.
+            Connect with WasenderAPI, official WhatsApp Cloud API, or your local WhatsApp Web/Baileys worker.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setShowNewConn(!showNewConn)}>
@@ -281,7 +288,7 @@ export default function WhatsAppPage() {
           <CardContent className="p-4 flex items-end gap-3">
             <div className="w-48 space-y-2">
               <Label>Provider</Label>
-              <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={provider} onChange={(e) => setProvider(e.target.value as 'baileys' | 'whatsapp_cloud')}>
+              <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={provider} onChange={(e) => setProvider(e.target.value as 'baileys' | 'whatsapp_cloud' | 'wasender')}>
                 <option value="baileys">WhatsApp Web / Baileys</option>
                 <option value="whatsapp_cloud">Official WhatsApp Cloud API</option>
                 <option value="wasender">WasenderAPI</option>
@@ -296,7 +303,7 @@ export default function WhatsAppPage() {
                 placeholder="e.g. Main Lab Number"
               />
             </div>
-            <Button onClick={createConnection} disabled={actionLoading || !newConnName.trim() || (provider === 'whatsapp_cloud' && (!cloudPhoneNumberId.trim() || !cloudAccessToken.trim())) || (provider === 'wasender' && (!wasenderSessionId.trim() || !wasenderApiKey.trim()))}>
+            <Button onClick={createConnection} disabled={actionLoading || !newConnName.trim() || (provider === 'whatsapp_cloud' && (!cloudPhoneNumberId.trim() || !cloudAccessToken.trim())) || (provider === 'wasender' && (!wasenderSessionId.trim() || !wasenderApiKey.trim() || !wasenderWebhookSecret.trim()))}>
               {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Create
             </Button>
@@ -312,7 +319,7 @@ export default function WhatsAppPage() {
                 </div>
                 <div className="space-y-1 md:col-span-2">
                   <Label>Webhook Secret *</Label>
-                  <Input type="password" value={wasenderWebhookSecret} onChange={(e) => setWasenderWebhookSecret(e.target.value)} placeholder="Optional; generated automatically if empty" />
+                  <Input type="password" value={wasenderWebhookSecret} onChange={(e) => setWasenderWebhookSecret(e.target.value)} placeholder="Secret configured in your WasenderAPI webhook settings" />
                   <p className="text-xs text-muted-foreground">After creating the connection, configure the displayed webhook URL in WasenderAPI and use the same secret.</p>
                 </div>
               </div>
