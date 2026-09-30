@@ -1,8 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Public Supabase project URL fallback for Netlify build-time execution.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://kawbiypmfluamxyinezt.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const env = process.env as Record<string, string | undefined>;
+const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || 'https://ozlovfaxljojheykroax.supabase.co';
+const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
+}
 
 export const supabaseServer = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
