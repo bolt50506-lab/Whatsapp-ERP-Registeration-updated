@@ -55,6 +55,18 @@ export default function WhatsAppPage() {
 
   const selected = connections.find((c) => c.id === selectedId) || connections[0];
 
+  const syncWasenderStatus = useCallback(async (conns: WhatsAppConnection[]) => {
+    const session = (await supabase.auth.getSession()).data.session;
+    if (!session?.access_token) return;
+    const wasenderConnections = conns.filter((c) => c.provider === 'wasender');
+    await Promise.all(wasenderConnections.map(async (conn) => {
+      await fetch(`/api/whatsapp/wasender/status?connection_id=${encodeURIComponent(conn.id)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store',
+      }).catch(() => undefined);
+    }));
+  }, []);
+
   const loadData = useCallback(async () => {
     if (!organization) return;
     const { data: conns } = await supabase
@@ -69,18 +81,6 @@ export default function WhatsAppPage() {
     setLoading(false);
     if (conns?.some((c) => c.provider === 'wasender')) await syncWasenderStatus(conns as WhatsAppConnection[]);
   }, [organization, selectedId, syncWasenderStatus]);
-
-  const syncWasenderStatus = useCallback(async (conns: WhatsAppConnection[]) => {
-    const session = (await supabase.auth.getSession()).data.session;
-    if (!session?.access_token) return;
-    const wasenderConnections = conns.filter((c) => c.provider === 'wasender');
-    await Promise.all(wasenderConnections.map(async (conn) => {
-      await fetch(`/api/whatsapp/wasender/status?connection_id=${encodeURIComponent(conn.id)}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        cache: 'no-store',
-      }).catch(() => undefined);
-    }));
-  }, []);
 
   const loadLogs = useCallback(async () => {
     if (!organization || !selected) return;
@@ -171,6 +171,9 @@ export default function WhatsAppPage() {
       setCloudVerifyToken('');
       setCloudAppSecret('');
       setProvider('baileys');
+      setWasenderSessionId('');
+      setWasenderApiKey('');
+      setWasenderWebhookSecret('');
       setShowNewConn(false);
       setSelectedId(payload.connection?.id || null);
       await loadData();
