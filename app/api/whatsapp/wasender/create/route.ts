@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'node:crypto';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 const WASENDER_BASE = 'https://www.wasenderapi.com';
