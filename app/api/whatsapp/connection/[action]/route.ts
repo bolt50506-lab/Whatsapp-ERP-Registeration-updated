@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import QRCode from 'qrcode';
 
 const ACTIONS = new Set(['start', 'reconnect', 'disconnect', 'logout']);
 
@@ -85,9 +86,11 @@ export async function POST(req: NextRequest, { params }: { params: { action: str
         );
         const qrPayload = await qrResponse.json().catch(() => ({}));
         if (qrResponse.ok) {
-          const rawQr = qrPayload?.qrCode || qrPayload?.qr || qrPayload?.data?.qrCode || qrPayload?.data?.qr || null;
-          if (typeof rawQr === 'string') {
-            qrData = rawQr.startsWith('data:image/') ? rawQr : `data:image/png;base64,${rawQr}`;
+          const rawQr = qrPayload?.data?.qrCode || qrPayload?.qrCode || qrPayload?.data?.qr || qrPayload?.qr || null;
+          if (typeof rawQr === 'string' && rawQr.trim()) {
+            qrData = rawQr.startsWith('data:image/')
+              ? rawQr
+              : await QRCode.toDataURL(rawQr, { margin: 2, width: 480 });
           }
         }
       }
