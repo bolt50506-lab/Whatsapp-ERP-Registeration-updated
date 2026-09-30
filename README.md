@@ -104,3 +104,17 @@ For radiology use report_type: radiology.
 ## Important
 
 Baileys is an unofficial WhatsApp Web automation library. It is not the official WhatsApp Business Platform and can be logged out or restricted. Keep the worker persistent and monitor connection logs.
+
+
+## WasenderAPI integration
+
+The gateway can use WasenderAPI instead of running the Baileys WhatsApp session itself.
+
+1. Create/connect a WhatsApp session in WasenderAPI and obtain the session API key.
+2. In **Dashboard -> WhatsApp Connection -> New Connection**, choose **WasenderAPI**.
+3. Enter the Wasender session ID, session API key and a webhook secret.
+4. The dashboard will show the HTTPS webhook URL for that connection. Add that URL in the WasenderAPI session webhook settings and subscribe to session-status and message-status/receipt events.
+5. Use the **Connect WhatsApp** button in the ERP dashboard to start the QR flow.
+6. The existing ERP event APIs continue to queue registration, invoice and report-ready messages. The worker sends WasenderAPI jobs through the same queue/retry system.
+
+WasenderAPI is an external WhatsApp Web/linked-device service. It does not require the local Baileys WhatsApp socket for a Wasender connection, but the existing worker still processes the ERP outbound queue. WasenderAPI supports text and document messages, which covers the current registration/invoice/report workflow.
