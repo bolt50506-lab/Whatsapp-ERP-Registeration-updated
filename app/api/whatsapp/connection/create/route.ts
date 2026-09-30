@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
+const env = process.env as Record<string, string | undefined>;
 const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  'https://kawbiypmfluamxyinezt.supabase.co';
+  env.NEXT_PUBLIC_SUPABASE_URL ||
+  'https://ozlovfaxljojheykroax.supabase.co';
 
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseAnonKey) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not configured');
+}
 
 export async function POST(req: NextRequest) {
   const authorization = req.headers.get('authorization') || '';
@@ -23,9 +28,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
-  // Use the user's access token for RLS-protected membership/connection
-  // queries. supabaseAdmin may fall back to the public key on deployments
-  // where SUPABASE_SERVICE_ROLE_KEY is not configured.
   const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
