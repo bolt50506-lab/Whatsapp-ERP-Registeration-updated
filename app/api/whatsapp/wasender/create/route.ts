@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'name, session_id and api_key are required' }, { status: 400 });
     }
 
-    const webhookSecret = String(body.webhook_secret || crypto.randomBytes(32).toString('hex'));
+    const webhookSecret = String(body.webhook_secret || '').trim();
+    if (!webhookSecret) return NextResponse.json({ error: 'webhook_secret is required so Wasender webhooks can be verified' }, { status: 400 });
 
     // Validate the supplied session key before saving it.
     const statusResponse = await fetch(WASENDER_BASE + '/api/status', {
