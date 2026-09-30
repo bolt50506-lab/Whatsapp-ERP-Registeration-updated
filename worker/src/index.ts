@@ -218,6 +218,47 @@ async function sendCloudMessage(job: any, connection: any) {
   return data;
 }
 
+async function sendWasenderMessage(job: any, connection: any) {
+  const { data: credentials, error } = await supabase
+    .from('wasender_credentials')
+    .select('session_id, api_key')
+    .eq('connection_id', connection.id)
+    .maybeSingle();
+
+  if (error) throw new Error(`Failed to load WasenderAPI credentials: ${error.message}`);
+  if (!credentials?.session_id || !credentials?.api_key) {
+    throw new Error('WasenderAPI credentials are incomplete');
+  }
+
+  const payload = job.document_url
+    ? {
+        to: job.recipient,
+        text: job.message || '',
+        documentUrl: job.document_url,
+        fileName: job.document_name || 'document.pdf',
+      }
+    : {
+        to: job.recipient,
+        text: job.message || '',
+      };
+
+  const response = await fetch('https://www.wasenderapi.com/api/send-message', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${credentials.api_key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || data?.success === false) {
+    throw new Error(data?.message || data?.error || `WasenderAPI HTTP ${response.status}`);
+  }
+
+  return data;
+}
+
 async function claimAndSend() {
   const { data: jobs, error } = await supabase.rpc('claim_message_queue', { p_limit: 10 });
   if (error) {
@@ -240,6 +281,8 @@ async function claimAndSend() {
 
       if (connection.provider === 'whatsapp_cloud') {
         result = await sendCloudMessage(job, connection);
+      } else if (connection.provider === 'wasender') {
+        result = await sendWasenderMessage(job, connection);
       } else {
         const sock = sockets.get(job.whatsapp_connection_id);
         if (!sock) throw new Error('WhatsApp Baileys connection is not online');
