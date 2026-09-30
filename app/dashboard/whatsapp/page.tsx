@@ -308,7 +308,7 @@ export default function WhatsAppPage() {
                   <Input type="password" value={wasenderApiKey} onChange={(e) => setWasenderApiKey(e.target.value)} placeholder="Keep this server-side" />
                 </div>
                 <div className="space-y-1 md:col-span-2">
-                  <Label>Webhook Secret</Label>
+                  <Label>Webhook Secret *</Label>
                   <Input type="password" value={wasenderWebhookSecret} onChange={(e) => setWasenderWebhookSecret(e.target.value)} placeholder="Optional; generated automatically if empty" />
                   <p className="text-xs text-muted-foreground">After creating the connection, configure the displayed webhook URL in WasenderAPI and use the same secret.</p>
                 </div>
@@ -394,6 +394,14 @@ export default function WhatsAppPage() {
                       <p className="text-xs text-muted-foreground text-center max-w-xs">
                         Open WhatsApp on your phone, go to Settings, Linked Devices, Link a Device, and scan this code.
                       </p>
+                    </div>
+                  )}
+
+                  {conn.provider === 'wasender' && (
+                    <div className="rounded-lg border border-border/40 bg-muted/20 p-3 text-xs">
+                      <p className="font-medium mb-1">WasenderAPI webhook URL</p>
+                      <code className="break-all text-muted-foreground">{`${window.location.origin}/api/webhooks/wasender/${conn.id}`}</code>
+                      <p className="text-muted-foreground mt-2">Add this HTTPS URL in the WasenderAPI session webhook settings and subscribe to session status and message status/receipt events.</p>
                     </div>
                   )}
 
