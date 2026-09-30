@@ -1,5 +1,5 @@
 export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'qr_required' | 'error';
-export type WhatsAppProvider = 'baileys' | 'whatsapp_cloud';
+export type WhatsAppProvider = 'baileys' | 'whatsapp_cloud' | 'wasender';
 export type MessageStatus = 'queued' | 'processing' | 'sent' | 'delivered' | 'failed' | 'cancelled';
 export type ReportType = 'laboratory' | 'radiology' | 'general';
 export type OrgRole = 'admin' | 'member';
