@@ -42,7 +42,10 @@ export default function WhatsAppPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [newConnName, setNewConnName] = useState('');
   const [showNewConn, setShowNewConn] = useState(false);
-  const [provider, setProvider] = useState<'baileys' | 'whatsapp_cloud'>('baileys');
+  const [provider, setProvider] = useState<'baileys' | 'whatsapp_cloud' | 'wasender'>('baileys');
+  const [wasenderSessionId, setWasenderSessionId] = useState('');
+  const [wasenderApiKey, setWasenderApiKey] = useState('');
+  const [wasenderWebhookSecret, setWasenderWebhookSecret] = useState('');
   const [cloudWabaId, setCloudWabaId] = useState('');
   const [cloudPhoneNumberId, setCloudPhoneNumberId] = useState('');
   const [cloudAccessToken, setCloudAccessToken] = useState('');
@@ -64,7 +67,20 @@ export default function WhatsAppPage() {
       setSelectedId(conns[0].id);
     }
     setLoading(false);
-  }, [organization, selectedId]);
+    if (conns?.some((c) => c.provider === 'wasender')) await syncWasenderStatus(conns as WhatsAppConnection[]);
+  }, [organization, selectedId, syncWasenderStatus]);
+
+  const syncWasenderStatus = useCallback(async (conns: WhatsAppConnection[]) => {
+    const session = (await supabase.auth.getSession()).data.session;
+    if (!session?.access_token) return;
+    const wasenderConnections = conns.filter((c) => c.provider === 'wasender');
+    await Promise.all(wasenderConnections.map(async (conn) => {
+      await fetch(`/api/whatsapp/wasender/status?connection_id=${encodeURIComponent(conn.id)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store',
+      }).catch(() => undefined);
+    }));
+  }, []);
 
   const loadLogs = useCallback(async () => {
     if (!organization || !selected) return;
@@ -103,7 +119,21 @@ export default function WhatsAppPage() {
       if (!session?.access_token) throw new Error('Session expired. Please sign in again.');
 
       let response: Response;
-      if (provider === 'whatsapp_cloud') {
+      if (provider === 'wasender') {
+        response = await fetch('/api/whatsapp/wasender/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            name: newConnName.trim(),
+            session_id: wasenderSessionId.trim(),
+            api_key: wasenderApiKey.trim(),
+            webhook_secret: wasenderWebhookSecret.trim() || undefined,
+          }),
+        });
+      } else if (provider === 'whatsapp_cloud') {
         response = await fetch('/api/whatsapp/cloud/create', {
           method: 'POST',
           headers: {
@@ -251,6 +281,7 @@ export default function WhatsAppPage() {
               <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={provider} onChange={(e) => setProvider(e.target.value as 'baileys' | 'whatsapp_cloud')}>
                 <option value="baileys">WhatsApp Web / Baileys</option>
                 <option value="whatsapp_cloud">Official WhatsApp Cloud API</option>
+                <option value="wasender">WasenderAPI</option>
               </select>
             </div>
             <div className="flex-1 space-y-2">
@@ -262,10 +293,27 @@ export default function WhatsAppPage() {
                 placeholder="e.g. Main Lab Number"
               />
             </div>
-            <Button onClick={createConnection} disabled={actionLoading || !newConnName.trim() || (provider === 'whatsapp_cloud' && (!cloudPhoneNumberId.trim() || !cloudAccessToken.trim()))}>
+            <Button onClick={createConnection} disabled={actionLoading || !newConnName.trim() || (provider === 'whatsapp_cloud' && (!cloudPhoneNumberId.trim() || !cloudAccessToken.trim())) || (provider === 'wasender' && (!wasenderSessionId.trim() || !wasenderApiKey.trim()))}>
               {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Create
             </Button>
+            {provider === 'wasender' && (
+              <div className="basis-full grid gap-3 md:grid-cols-2 pt-2 border-t">
+                <div className="space-y-1">
+                  <Label>Wasender Session ID *</Label>
+                  <Input value={wasenderSessionId} onChange={(e) => setWasenderSessionId(e.target.value)} placeholder="Session ID from WasenderAPI" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Wasender API Key *</Label>
+                  <Input type="password" value={wasenderApiKey} onChange={(e) => setWasenderApiKey(e.target.value)} placeholder="Keep this server-side" />
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <Label>Webhook Secret</Label>
+                  <Input type="password" value={wasenderWebhookSecret} onChange={(e) => setWasenderWebhookSecret(e.target.value)} placeholder="Optional; generated automatically if empty" />
+                  <p className="text-xs text-muted-foreground">After creating the connection, configure the displayed webhook URL in WasenderAPI and use the same secret.</p>
+                </div>
+              </div>
+            )}
             {provider === 'whatsapp_cloud' && (
               <div className="basis-full grid gap-3 md:grid-cols-3 pt-2 border-t">
                 <div className="space-y-1"><Label>WABA ID</Label><Input value={cloudWabaId} onChange={(e) => setCloudWabaId(e.target.value)} placeholder="Meta WABA ID" /></div>
@@ -357,6 +405,12 @@ export default function WhatsAppPage() {
                   )}
 
                   <div className="flex flex-wrap gap-2 pt-2">
+                    {conn.provider === 'wasender' && (conn.status === 'disconnected' || conn.status === 'qr_required') && (
+                      <Button size="sm" onClick={() => callWorker(conn.status === 'qr_required' ? 'reconnect' : 'start')} disabled={actionLoading}>
+                        <QrCode className="w-3.5 h-3.5 mr-1.5" />
+                        {conn.status === 'qr_required' ? 'Refresh QR' : 'Connect WhatsApp'}
+                      </Button>
+                    )}
                     {conn.provider === 'baileys' && conn.status === 'disconnected' && (
                       <Button size="sm" onClick={() => callWorker('start')} disabled={actionLoading}>
                         <QrCode className="w-3.5 h-3.5 mr-1.5" />
